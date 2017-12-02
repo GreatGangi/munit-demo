@@ -1,0 +1,5 @@
+<?xml version='1.0' encoding='windows-1252'?>
+<bmi:CalculateBmiRequest xmlns:bmi="http://codecentric.de/calculate-bmi/">
+  <bmi:length>1.6</bmi:length>
+  <bmi:weight>80</bmi:weight>
+</bmi:CalculateBmiRequest>

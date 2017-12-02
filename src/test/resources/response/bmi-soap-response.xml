@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?><bmi:CalculateBmiResponse xmlns:bmi="http://codecentric.de/calculate-bmi/" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <bmi:bmi>31.3</bmi:bmi>
+  <bmi:comment>Obese Class I (Moderately obese)</bmi:comment>
+</bmi:CalculateBmiResponse>

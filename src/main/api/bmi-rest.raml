@@ -1,0 +1,29 @@
+#%RAML 1.0
+baseUri: https://bmi-calculator.some-domain.com
+title: bmi-demo
+mediaType: application/json
+version: 2.0
+
+/bmi/{weight}/{size}:
+  uriParameters: 
+    weight:
+      description: Weight in kilograms
+      type: number
+      required: true
+      format: float
+      minimum: 0
+    size:
+      description: Size in meters
+      type: number
+      required: true
+      format: float
+      minimum: 0
+  get:
+    description: Compute BMI based on size and weight.
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include bmi-with-description-example.json
+            type: !include bmi-with-description.raml
+
