@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns:assert-object-equals="http://www.mulesoft.org/schema/mule/assert-object-equals" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:mock="http://www.mulesoft.org/schema/mule/mock" xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:assert-object-equals="http://www.mulesoft.org/schema/mule/assert-object-equals" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:mock="http://www.mulesoft.org/schema/mule/mock" xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
 http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/mock/current/mule-mock.xsd
-http://www.mulesoft.org/schema/mule/assert-object-equals http://www.mulesoft.org/schema/mule/assert-object-equals/current/mule-assert-object-equals.xsd">
+http://www.mulesoft.org/schema/mule/assert-object-equals http://www.mulesoft.org/schema/mule/assert-object-equals/current/mule-assert-object-equals.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
 
     <spring:beans>
         <spring:import resource="classpath:munit-demo.xml" />
@@ -13,8 +14,47 @@ http://www.mulesoft.org/schema/mule/assert-object-equals http://www.mulesoft.org
     <munit:config mock-connectors="false" mock-inbounds="false" doc:name="MUnit configuration"/>
 
     <http:request-config name="HTTP_Request_Configuration" host="localhost" port="8081" basePath="/api" doc:name="HTTP Request Configuration"/>
-
-    <munit:test name="get:/bmi/weight/size:bmi-rest-config-200-application/json-FlowTest" description="Verifying functionality of [get:/bmi/weight/size:bmi-rest-config-200-application/json]">
+    <munit:test name="get:/bmi/weight/size:bmi-rest-config-200-application/json-flow-test-with-mock-and-spy" description="Verifying functionality of [get:/bmi/weight/size:bmi-rest-config-200-application/json]">
+        <mock:spy messageProcessor=".*:.*" doc:name="Spy bmi-soap-cloud">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['bmi-soap-cloud']"/>
+            </mock:with-attributes>
+            <mock:assertions-before-call>
+                <dw:transform-message doc:name="Parse XML">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload]]></dw:set-payload>
+                </dw:transform-message>
+                <munit:assert-on-equals message="wrong length" expectedValue="#['1.6']" actualValue="#[payload.alculateBmiRequest.length.length]" doc:name="Assert length"/>
+                <munit:assert-on-equals message="wrong weight" expectedValue="#['80']" actualValue="#[payload.alculateBmiRequest.length.length.weight]" doc:name="Assert weight"/>
+            </mock:assertions-before-call>
+        </mock:spy>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock bmi-soap-cloud with bmi-soap-response.xml">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['bmi-soap-cloud']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[getResource('response/bmi-soap-response.xml').asStream()]" mimeType="application/xml"/>
+        </mock:when>
+        <set-variable variableName="size" value="#['1.6']" doc:name="size"/>
+        <set-variable variableName="weight" value="#['80']" doc:name="weight"/>
+        <http:request config-ref="HTTP_Request_Configuration" path="/bmi/#[flowVars['weight']]/#[flowVars['size']]" method="GET" doc:name="HTTP">
+            <http:request-builder>
+                <http:header headerName="Accept" value="application/json"/>
+            </http:request-builder>
+        </http:request>
+        <object-to-string-transformer doc:name="http response to string"/>
+        <munit:assert-true message="The HTTP Status code is not correct!" condition="#[messageInboundProperty('http.status').is(eq(200))]" doc:name="assert that - http.status eq 200"/>
+        <dw:transform-message doc:name="Parse JSON">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+        <munit:assert-on-equals message="wrong bmi" expectedValue="#['31.3']" actualValue="#[payload.bmi]" doc:name="Assert bmi"/>
+        <munit:assert-on-equals message="wrong description" expectedValue="#['Obese Class I (Moderately obese)']" actualValue="#[payload.description]" doc:name="Assert description"/>
+    </munit:test>
+    <munit:test name="get:/bmi/weight/size:bmi-rest-config-200-application/json-flow-test-complete" description="Verifying functionality of [get:/bmi/weight/size:bmi-rest-config-200-application/json]">
         <mock:spy messageProcessor=".*:.*" doc:name="Spy bmi-soap-cloud">
             <mock:with-attributes>
                 <mock:with-attribute name="doc:name" whereValue="#['bmi-soap-cloud']"/>
@@ -34,20 +74,21 @@ http://www.mulesoft.org/schema/mule/assert-object-equals http://www.mulesoft.org
                 <mock:with-attribute name="doc:name" whereValue="#['bmi-statistics']"/>
             </mock:with-attributes>
             <mock:assertions-before-call>
-                <assert-object-equals:compare-objects expected-ref="#[getResource('message/bmi-statistics.json').asStream()]" doc:name="Assert Object Equals bmi-statistics.json" containsOnlyOnMaps="true">
-                </assert-object-equals:compare-objects>
+                <assert-object-equals:compare-objects expected-ref="#[getResource('message/bmi-statistics.json').asStream()]" containsOnlyOnMaps="true" doc:name="Assert Object Equals bmi-statistics.json"/>
             </mock:assertions-before-call>
         </mock:spy>
-        <set-variable variableName="size" value="#['1.6']" doc:name="size" />
-        <set-variable variableName="weight" value="#['80']" doc:name="weight" />
-        <http:request config-ref="HTTP_Request_Configuration" method="GET" path="/bmi/#[flowVars['weight']]/#[flowVars['size']]" doc:name="HTTP">
+        <set-variable variableName="size" value="#['1.6']" doc:name="size"/>
+        <set-variable variableName="weight" value="#['80']" doc:name="weight"/>
+        <http:request config-ref="HTTP_Request_Configuration" path="/bmi/#[flowVars['weight']]/#[flowVars['size']]" method="GET" doc:name="HTTP">
             <http:request-builder>
-                <http:header headerName="Accept" value="application/json" />
+                <http:header headerName="Accept" value="application/json"/>
             </http:request-builder>
         </http:request>
-        <object-to-string-transformer doc:name="http response to string" />
-        <munit:assert-true message="The HTTP Status code is not correct!" condition="#[messageInboundProperty('http.status').is(eq(200))]" doc:name="assert that - http.status eq 200" />
+        <object-to-string-transformer doc:name="http response to string"/>
+        <munit:assert-true message="The HTTP Status code is not correct!" condition="#[messageInboundProperty('http.status').is(eq(200))]" doc:name="assert that - http.status eq 200"/>
         <assert-object-equals:compare-objects expected-ref="#[getResource('response/get_200_bmi_80_1.6_application_json.json').asStream()]" doc:name="Assert Object Equals"/>
     </munit:test>
+
+
 
 </mule>
