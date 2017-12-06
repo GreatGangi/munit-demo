@@ -14,6 +14,7 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
     <munit:config mock-connectors="false" mock-inbounds="false" doc:name="MUnit configuration"/>
 
     <http:request-config name="HTTP_Request_Configuration" host="localhost" port="8081" basePath="/api" doc:name="HTTP Request Configuration"/>
+
     <munit:test name="get:/bmi/weight/size:bmi-rest-config-200-application/json-flow-test-with-mock-and-spy" description="Verifying functionality of [get:/bmi/weight/size:bmi-rest-config-200-application/json]">
         <mock:spy messageProcessor=".*:.*" doc:name="Spy bmi-soap-cloud">
             <mock:with-attributes>
@@ -54,6 +55,7 @@ payload]]></dw:set-payload>
         <munit:assert-on-equals message="wrong bmi" expectedValue="#['31.3']" actualValue="#[payload.bmi]" doc:name="Assert bmi"/>
         <munit:assert-on-equals message="wrong description" expectedValue="#['Obese Class I (Moderately obese)']" actualValue="#[payload.description]" doc:name="Assert description"/>
     </munit:test>
+
     <munit:test name="get:/bmi/weight/size:bmi-rest-config-200-application/json-flow-test-complete" description="Verifying functionality of [get:/bmi/weight/size:bmi-rest-config-200-application/json]">
         <mock:spy messageProcessor=".*:.*" doc:name="Spy bmi-soap-cloud">
             <mock:with-attributes>
@@ -74,7 +76,11 @@ payload]]></dw:set-payload>
                 <mock:with-attribute name="doc:name" whereValue="#['bmi-statistics']"/>
             </mock:with-attributes>
             <mock:assertions-before-call>
-                <assert-object-equals:compare-objects expected-ref="#[getResource('message/bmi-statistics.json').asStream()]" containsOnlyOnMaps="true" doc:name="Assert Object Equals bmi-statistics.json"/>
+                <assert-object-equals:compare-objects expected-ref="#[getResource('message/bmi-statistics.json').asStream()]" containsOnlyOnMaps="true" doc:name="Assert Object Equals bmi-statistics.json">
+                    <assert-object-equals:path-options>
+                        <assert-object-equals:path-option>['date'] ignore</assert-object-equals:path-option>
+                    </assert-object-equals:path-options>
+                </assert-object-equals:compare-objects>
             </mock:assertions-before-call>
         </mock:spy>
         <set-variable variableName="size" value="#['1.6']" doc:name="size"/>
@@ -88,7 +94,5 @@ payload]]></dw:set-payload>
         <munit:assert-true message="The HTTP Status code is not correct!" condition="#[messageInboundProperty('http.status').is(eq(200))]" doc:name="assert that - http.status eq 200"/>
         <assert-object-equals:compare-objects expected-ref="#[getResource('response/get_200_bmi_80_1.6_application_json.json').asStream()]" doc:name="Assert Object Equals"/>
     </munit:test>
-
-
 
 </mule>
